@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Budget App
+Comment=Budget management desktop app
+Exec=BudgetApp
+Icon=BudgetApp
+Categories=Office;Finance;
+Terminal=false
+StartupNotify=true

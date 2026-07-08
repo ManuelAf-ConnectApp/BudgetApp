@@ -1,0 +1,13 @@
+Budget App
+
+Copyright 2026 Manuel Maria Alconchel Fernandez
+
+This product includes software developed using the following third-party components:
+
+- PySide6 / Qt
+- ReportLab
+- mysql-connector-python
+
+Each third-party component is distributed under its own applicable license.
+
+The source code in this repository is licensed under the Apache License, Version 2.0.
