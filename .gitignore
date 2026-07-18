@@ -1,0 +1,23 @@
+# Build artifacts
+build/
+dist/
+*.spec.bak
+
+# PyInstaller / packaging
+*.AppImage
+AppDir/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv*/
+venv/
+
+# Local databases / logs
+*.sqlite
+*.sqlite3
+*.log
+
+# OS / IDE
+.DS_Store
