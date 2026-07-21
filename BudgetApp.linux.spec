@@ -4,17 +4,23 @@ from pathlib import Path
 
 
 ICON_FILE = Path("assets/app_icon.png")
+MANUAL_FILE = Path("docs/Budget_App_Manual_es.pdf")
+
+# The Spanish manual is bundled only when present in the repo; the app does not
+# require it at runtime, so a missing PDF must not break the build.
+datas = [
+    ("assets/app_icon.png", "assets"),
+    ("assets/connectapp_logo.jpg", "assets"),
+]
+if MANUAL_FILE.exists():
+    datas.append((str(MANUAL_FILE), "docs"))
 
 
 a = Analysis(
     ["main.py"],
     pathex=["."],
     binaries=[],
-    datas=[
-        ("assets/app_icon.png", "assets"),
-        ("assets/connectapp_logo.jpg", "assets"),
-        ("docs/Budget_App_Manual_es.pdf", "docs"),
-    ],
+    datas=datas,
     hiddenimports=[
         "mysql.connector.locales",
         "mysql.connector.locales.eng",
