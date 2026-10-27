@@ -1,0 +1,1 @@
+"""Budget App test suite."""

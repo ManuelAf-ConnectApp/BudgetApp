@@ -39,8 +39,29 @@ class PDFGenerator:
     MUTED_TEXT = colors.HexColor("#5B677A")
 
     @staticmethod
-    def generate_budget_pdf(budget: Budget, company: Company, file_path: str):
+    def generate_budget_pdf(budget: Budget, company: Company, file_path: str, language: str = "es"):
         """Genera un archivo PDF profesional a partir de un objeto Budget."""
+
+        labels = {
+            "es": {
+                "budget": "PRESUPUESTO", "reference": "Presupuesto", "date": "Fecha",
+                "generated_for": "Documento comercial generado para", "issuer": "Empresa emisora",
+                "client": "Cliente", "nif": "NIF/CIF", "description": "Descripción",
+                "product": "Producto", "unit": "Unidad", "quantity": "Cant.", "unit_price": "P. Unit.",
+                "discount": "Dto.", "tax": "IVA", "total": "Total", "notes": "Obs.",
+                "subtotal": "Subtotal", "discount_total": "Descuento total", "taxable": "Base imponible",
+                "footer": "Documento generado electrónicamente por Budget App.", "page": "Página",
+            },
+            "en": {
+                "budget": "QUOTE", "reference": "Quote", "date": "Date",
+                "generated_for": "Commercial document generated for", "issuer": "Issuing company",
+                "client": "Client", "nif": "Tax ID", "description": "Description",
+                "product": "Product", "unit": "Unit", "quantity": "Qty.", "unit_price": "Unit price",
+                "discount": "Discount", "tax": "Tax", "total": "Total", "notes": "Notes",
+                "subtotal": "Subtotal", "discount_total": "Total discount", "taxable": "Taxable amount",
+                "footer": "Document generated electronically by Budget App.", "page": "Page",
+            },
+        }["en" if language == "en" else "es"]
 
         doc = SimpleDocTemplate(
             file_path,
@@ -111,13 +132,13 @@ class PDFGenerator:
             canvas.setFont("Helvetica-Bold", 16)
             canvas.drawString(left, height - 11 * mm, canvas_text(company.name))
             canvas.setFont("Helvetica", 8.5)
-            canvas.drawRightString(right, height - 11 * mm, f"Presupuesto #{format_budget_reference(budget.budget_id)}")
+            canvas.drawRightString(right, height - 11 * mm, f"{labels['reference']} #{format_budget_reference(budget.budget_id)}")
 
             canvas.setFillColor(PDFGenerator.TEXT_COLOR)
             canvas.setFont("Helvetica-Bold", 10)
-            canvas.drawString(left, height - 27 * mm, "PRESUPUESTO")
+            canvas.drawString(left, height - 27 * mm, labels["budget"])
             canvas.setFont("Helvetica", 8.5)
-            canvas.drawRightString(right, height - 27 * mm, f"Fecha: {fmt_date(budget.budget_date)}")
+            canvas.drawRightString(right, height - 27 * mm, f"{labels['date']}: {fmt_date(budget.budget_date)}")
 
             canvas.setStrokeColor(PDFGenerator.GRID_COLOR)
             canvas.setLineWidth(0.7)
@@ -127,7 +148,7 @@ class PDFGenerator:
             canvas.setFont("Helvetica", 8)
             footer_left = f"{canvas_text(company.address)}"
             footer_center = f"{canvas_text(company.email)}"
-            footer_right = f"{canvas_text(company.phone)} | Página {doc_obj.page}"
+            footer_right = f"{canvas_text(company.phone)} | {labels['page']} {doc_obj.page}"
             canvas.drawString(left, 12 * mm, footer_left[:80])
             canvas.drawCentredString(width / 2, 12 * mm, footer_center[:80])
             canvas.drawRightString(right, 12 * mm, footer_right[:80])
@@ -153,26 +174,26 @@ class PDFGenerator:
             return block
 
         story.append(Spacer(1, 2 * mm))
-        story.append(Paragraph(f"Presupuesto #{format_budget_reference(budget.budget_id)}", title_style))
-        story.append(Paragraph(f"Documento comercial generado para {rich_text(budget.client)}", subtitle_style))
+        story.append(Paragraph(f"{labels['reference']} #{format_budget_reference(budget.budget_id)}", title_style))
+        story.append(Paragraph(f"{labels['generated_for']} {rich_text(budget.client)}", subtitle_style))
         story.append(Spacer(1, 4 * mm))
 
         date_str = fmt_date(budget.budget_date)
         info_table = Table(
             [[
                 section_block(
-                    "Empresa emisora",
+                    labels["issuer"],
                     f"{rich_text(company.name)}<br/>"
-                    f"CIF: {rich_text(company.cif)}<br/>"
+                    f"{labels['nif']}: {rich_text(company.cif)}<br/>"
                     f"{rich_text(company.address)}<br/>"
                     f"{rich_text(company.email)}<br/>"
                     f"{rich_text(company.phone)}",
                 ),
                 section_block(
-                    "Cliente",
+                    labels["client"],
                     f"{rich_text(budget.client)}<br/>"
-                    f"NIF/CIF: {rich_text(budget.nif_cif)}<br/>"
-                    f"Fecha: {date_str}",
+                    f"{labels['nif']}: {rich_text(budget.nif_cif)}<br/>"
+                    f"{labels['date']}: {date_str}",
                 ),
             ]],
             colWidths=[86 * mm, 86 * mm],
@@ -182,15 +203,15 @@ class PDFGenerator:
         story.append(Spacer(1, 6 * mm))
 
         table_data = [[
-            Paragraph("<b>Descripción</b>", meta_style),
-            Paragraph("<b>Producto</b>", meta_style),
-            Paragraph("<b>Unidad</b>", meta_style),
-            Paragraph("<b>Cant.</b>", meta_style),
-            Paragraph("<b>P. Unit.</b>", meta_style),
-            Paragraph("<b>Dto.</b>", meta_style),
-            Paragraph("<b>IVA</b>", meta_style),
-            Paragraph("<b>Total</b>", meta_style),
-            Paragraph("<b>Obs.</b>", meta_style),
+            Paragraph(f"<b>{labels['description']}</b>", meta_style),
+            Paragraph(f"<b>{labels['product']}</b>", meta_style),
+            Paragraph(f"<b>{labels['unit']}</b>", meta_style),
+            Paragraph(f"<b>{labels['quantity']}</b>", meta_style),
+            Paragraph(f"<b>{labels['unit_price']}</b>", meta_style),
+            Paragraph(f"<b>{labels['discount']}</b>", meta_style),
+            Paragraph(f"<b>{labels['tax']}</b>", meta_style),
+            Paragraph(f"<b>{labels['total']}</b>", meta_style),
+            Paragraph(f"<b>{labels['notes']}</b>", meta_style),
         ]]
 
         for line in budget.budget_lines:
@@ -215,11 +236,11 @@ class PDFGenerator:
 
         summary_table = Table(
             [
-                ["Subtotal", money(subtotal)],
-                ["Descuento total", money(discount_total)],
-                ["Base imponible", money(taxable_total)],
-                ["IVA", money(tax_total)],
-                ["Total", money(grand_total)],
+                [labels["subtotal"], money(subtotal)],
+                [labels["discount_total"], money(discount_total)],
+                [labels["taxable"], money(taxable_total)],
+                [labels["tax"], money(tax_total)],
+                [labels["total"], money(grand_total)],
             ],
             colWidths=[55 * mm, 35 * mm],
             hAlign="RIGHT",
@@ -270,7 +291,7 @@ class PDFGenerator:
         story.append(Spacer(1, 6 * mm))
         story.append(summary_table)
         story.append(Spacer(1, 4 * mm))
-        story.append(Paragraph("Documento generado electrónicamente por Budget App.", small_style))
+        story.append(Paragraph(labels["footer"], small_style))
 
         doc.build(story, onFirstPage=draw_header_footer, onLaterPages=draw_header_footer)
 

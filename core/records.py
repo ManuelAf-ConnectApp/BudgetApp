@@ -39,4 +39,5 @@ class BudgetRecord:
     client: str = ""
     budget_date: datetime.date = field(default_factory=datetime.date.today)
     total: float = 0.0
+    status: str = "draft"
     lines: list[BudgetLineRecord] = field(default_factory=list)

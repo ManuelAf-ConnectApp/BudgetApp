@@ -6,6 +6,7 @@
 # Licensed under the Apache License, Version 2.0.
 
 import datetime
+import sqlite3
 
 from core.records import BudgetLineRecord, BudgetRecord, CompanyProfileRecord
 from infrastructure.database.create_database import CreateDatabase
@@ -55,8 +56,16 @@ class LocalDatabase:
         conn = self.create_database.connect()
         cursor = conn.cursor()
 
-        query = """INSERT INTO company_profile (id,name, cif, address, email, phone)
-                   VALUES (1, ?, ?, ?, ?, ?)"""
+        query = """
+            INSERT INTO company_profile (id, name, cif, address, email, phone)
+            VALUES (1, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                cif = excluded.cif,
+                address = excluded.address,
+                email = excluded.email,
+                phone = excluded.phone
+        """
 
         cursor.execute(query, (
             data.name,
@@ -88,7 +97,8 @@ class LocalDatabase:
                        COALESCE(bl.unit_price, bl.price, 0) AS unit_price,
                        COALESCE(bl.discount_pct, 0) AS discount_pct,
                        COALESCE(bl.tax_pct, 21) AS tax_pct,
-                       COALESCE(bl.notes, '') AS notes
+                       COALESCE(bl.notes, '') AS notes,
+                       b.status
                 FROM budgets b
                          LEFT JOIN budget_lines bl ON b.id = bl.budget_id
                 ORDER BY b.id DESC
@@ -113,6 +123,7 @@ class LocalDatabase:
                     client=row[2],
                     budget_date=_coerce_budget_date(row[3]),
                     total=float(row[4]) if row[4] is not None else 0.0,
+                    status=row[13] or "draft",
                 )
 
                 budgets_dict[budget_id] = budget
@@ -134,16 +145,29 @@ class LocalDatabase:
         # 4. Devolvemos la lista de los objetos Budget que se han agrupado
         return list(budgets_dict.values())
 
-    def save_budget(self, budget: BudgetRecord):
+    def save_budget(self, budget: BudgetRecord) -> int:
 
         conn = self.create_database.connect()
         cursor = conn.cursor()
 
         try:
-            cursor.execute('''INSERT INTO budgets (nif_cif, client_name, budget_date, total)
-                              VALUES (?, ?, ?, ?)''', (budget.nif_cif, budget.client, budget.budget_date.isoformat(), budget.total))
-
-            budget_id = cursor.lastrowid
+            if budget.budget_id:
+                cursor.execute(
+                    """UPDATE budgets SET nif_cif = ?, client_name = ?, budget_date = ?, total = ?, status = ?
+                       WHERE id = ?""",
+                    (budget.nif_cif, budget.client, budget.budget_date.isoformat(), str(budget.total), budget.status, budget.budget_id),
+                )
+                if cursor.rowcount == 0:
+                    raise ValueError(f"Budget {budget.budget_id} does not exist")
+                cursor.execute("DELETE FROM budget_lines WHERE budget_id = ?", (budget.budget_id,))
+                budget_id = budget.budget_id
+            else:
+                cursor.execute(
+                    """INSERT INTO budgets (nif_cif, client_name, budget_date, total, status)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (budget.nif_cif, budget.client, budget.budget_date.isoformat(), str(budget.total), budget.status),
+                )
+                budget_id = cursor.lastrowid
 
             lines_data = []
             for line in budget.lines:
@@ -152,10 +176,10 @@ class LocalDatabase:
                     line.description,
                     line.product,
                     line.unit,
-                    line.quantity,
-                    line.unit_price,
-                    line.discount_pct,
-                    line.tax_pct,
+                    str(line.quantity),
+                    str(line.unit_price),
+                    str(line.discount_pct),
+                    str(line.tax_pct),
                     line.notes,
                 ))
 
@@ -169,9 +193,36 @@ class LocalDatabase:
             conn.commit()
             return budget_id
 
-        except Exception as e:
+        except Exception:
             conn.rollback()
-            print(f"Database error: {e}")
-            raise e
+            raise
+        finally:
+            cursor.close()
+            conn.close()
+
+    def delete_budget(self, budget_id: int) -> None:
+        conn = self.create_database.connect()
+        try:
+            conn.execute("DELETE FROM budget_lines WHERE budget_id = ?", (budget_id,))
+            conn.execute("DELETE FROM budgets WHERE id = ?", (budget_id,))
+            conn.commit()
         finally:
             conn.close()
+
+    def update_budget_status(self, budget_id: int, status: str) -> None:
+        conn = self.create_database.connect()
+        try:
+            conn.execute("UPDATE budgets SET status = ? WHERE id = ?", (status, budget_id))
+            conn.commit()
+        finally:
+            conn.close()
+
+    def backup_to(self, destination: str) -> None:
+        """Use SQLite's online backup API so an active database stays consistent."""
+        destination_conn = sqlite3.connect(destination)
+        source_conn = self.create_database.connect()
+        try:
+            source_conn.backup(destination_conn)
+        finally:
+            destination_conn.close()
+            source_conn.close()

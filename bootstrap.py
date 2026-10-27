@@ -18,6 +18,7 @@ from core.records import CompanyProfileRecord
 from infrastructure.database.local_database import LocalDatabase
 from infrastructure.database.remote_database import RemoteDatabase
 from infrastructure.runtime_paths import local_database_path, resource_path
+from infrastructure.services.credentials import clear_remote_password, get_remote_password
 from infrastructure.ui.i18n import DEFAULT_LANGUAGE, normalize_language
 from infrastructure.ui.style import StyleApp
 from infrastructure.ui.views.dialog.company_dialog import CompanyConfigDialog
@@ -47,7 +48,7 @@ class AppController:
         self.app = QApplication(sys.argv)
         self.app.setApplicationName("Budget App")
         self.app.setApplicationDisplayName("Budget App")
-        self.app.setWindowIcon(QIcon(str(resource_path("assets", "app_icon.png"))))
+        self.app.setWindowIcon(QIcon(str(resource_path("images", "BudgetApp.png"))))
         self.main_window = None
         self.welcome_window = None
 
@@ -139,7 +140,7 @@ class AppController:
         host = self.settings.value("remote_host")
         db = self.settings.value("remote_db")
         username = self.settings.value("remote_username")
-        password = self.settings.value("remote_password")
+        password = get_remote_password()
 
         if not host or not db or not username or not password:
             dialog = ConnectionDialog(language=language)
@@ -152,7 +153,7 @@ class AppController:
             host = self.settings.value("remote_host")
             db = self.settings.value("remote_db")
             username = self.settings.value("remote_username")
-            password = self.settings.value("remote_password")
+            password = get_remote_password()
 
         self._open_main_window_remote(host, db, username, password, language)
 
@@ -178,7 +179,7 @@ class AppController:
         host = self.settings.value("remote_host")
         db = self.settings.value("remote_db")
         username = self.settings.value("remote_username")
-        password = self.settings.value("remote_password")
+        password = get_remote_password()
 
         if not host or not db or not username or not password:
             return
@@ -210,7 +211,7 @@ class AppController:
         self.settings.remove("remote_host")
         self.settings.remove("remote_db")
         self.settings.remove("remote_username")
-        self.settings.remove("remote_password")
+        clear_remote_password()
 
         db_path = local_database_path("my_budgets.db")
 

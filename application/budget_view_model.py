@@ -30,6 +30,7 @@ class BudgetViewModel(QObject):
     save_error = Signal(str)
     pdf_export_success = Signal(str)
     pdf_export_error = Signal(str)
+    budget_deleted = Signal(int)
 
     def __init__(self, repository: BudgetRepository, language: str = "es"):
         super().__init__()
@@ -46,6 +47,7 @@ class BudgetViewModel(QObject):
             client=self.budget.client,
             budget_date=self.budget.budget_date,
             total=self.budget.total,
+            status=self.budget.status,
             lines=[
                 BudgetLineRecord(
                     description=line.description,
@@ -68,6 +70,7 @@ class BudgetViewModel(QObject):
             nif_cif=record.nif_cif,
             client=record.client,
             budget_date=record.budget_date,
+            status=record.status,
         )
         budget.total = record.total
         for line in record.lines:
@@ -175,6 +178,22 @@ class BudgetViewModel(QObject):
         except Exception as e:
             self.save_error.emit(t("vm.save_db_error", self.lang, error=str(e)))
 
+    def delete_budget(self, budget_id: int):
+        try:
+            self.db.delete_budget(budget_id)
+            self.selected_history_index = -1
+            self.budget_deleted.emit(budget_id)
+            self.load_budget_list()
+        except Exception as e:
+            self.save_error.emit(t("vm.save_db_error", self.lang, error=str(e)))
+
+    def update_budget_status(self, budget_id: int, status: str):
+        try:
+            self.db.update_budget_status(budget_id, status)
+            self.load_budget_list()
+        except Exception as e:
+            self.save_error.emit(t("vm.save_db_error", self.lang, error=str(e)))
+
     @staticmethod
     def is_valid_dni_nie(document: str) -> bool:
         doc_clean = document.upper().replace("-", "").replace(" ", "")
@@ -219,7 +238,7 @@ class BudgetViewModel(QObject):
                 phone=company_record.phone,
             )
 
-            PDFGenerator.generate_budget_pdf(self.budget, company, file_path)
+            PDFGenerator.generate_budget_pdf(self.budget, company, file_path, language=self.lang)
             self.pdf_export_success.emit(file_path)
         except Exception as e:
             self.pdf_export_error.emit(t("vm.pdf_critical_error", self.lang, error=str(e)))

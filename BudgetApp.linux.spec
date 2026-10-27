@@ -11,6 +11,7 @@ MANUAL_FILE = Path("docs/Budget_App_Manual_es.pdf")
 datas = [
     ("assets/app_icon.png", "assets"),
     ("assets/connectapp_logo.jpg", "assets"),
+    ("images/BudgetApp.png", "images"),
 ]
 if MANUAL_FILE.exists():
     datas.append((str(MANUAL_FILE), "docs"))

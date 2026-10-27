@@ -6,6 +6,7 @@
 # Licensed under the Apache License, Version 2.0.
 
 import datetime
+from decimal import Decimal, InvalidOperation
 from html import escape
 
 from PySide6.QtCore import QDate, Qt, QTimer
@@ -20,6 +21,7 @@ from PySide6.QtPrintSupport import QPrinter, QPrintDialog
 from application.budget_view_model import BudgetViewModel
 from core.model.budget import Budget
 from core.records import BudgetLineRecord
+from core.money import money, to_decimal
 from infrastructure.ui.i18n import normalize_language, t
 from infrastructure.ui.style import StyleApp
 
@@ -367,6 +369,7 @@ class BudgetViewWidget(QWidget):
             nif_cif=budget.nif_cif,
             client=budget.client,
             budget_date=budget.budget_date,
+            status=budget.status,
         )
         self.input_client_company.setText("")
         self.input_client_name.setText(budget.client)
@@ -511,6 +514,8 @@ class BudgetViewWidget(QWidget):
         """
 
     def save_budget_as(self):
+        # "Save as" must create a distinct record rather than overwriting the loaded one.
+        self._vm.budget.budget_id = 0
         self._pending_preserve_state = self._capture_state()
         self._preserve_editor_after_save = True
         self.on_save_clicked()
@@ -602,25 +607,25 @@ class BudgetViewWidget(QWidget):
             discount_pct = self._parse_float(row, 5, default=0.0)
             tax_pct = self._parse_float(row, 6, default=21.0)
             gross = quantity * unit_price
-            net = gross - (gross * discount_pct / 100.0)
-            total = net + (net * tax_pct / 100.0)
+            net = gross - (gross * discount_pct / Decimal("100"))
+            total = money(net + (net * tax_pct / Decimal("100")))
             total_item = self._create_text_item(f"{total:.2f}€", editable=False, alignment=Qt.AlignmentFlag.AlignRight)
             self._set_item_safely(row, 7, total_item)
-        except Exception:
+        except (InvalidOperation, ValueError):
             self._set_item_safely(
                 row,
                 7,
                 self._create_text_item(t("budget.zero_amount", self.lang), editable=False, alignment=Qt.AlignmentFlag.AlignRight),
             )
 
-    def _parse_float(self, row: int, column: int, default: float = 0.0) -> float:
+    def _parse_float(self, row: int, column: int, default: Decimal | float = Decimal("0")) -> Decimal:
         item = self.lines_table.item(row, column)
         if item is None:
             return default
         text = item.text().strip().replace("%", "").replace("€", "")
         if not text:
             return default
-        return float(text.replace(",", "."))
+        return to_decimal(text.replace(",", "."))
 
     def _set_item_safely(self, row: int, column: int, item: QTableWidgetItem):
         self.lines_table.blockSignals(True)

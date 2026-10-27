@@ -14,6 +14,7 @@ a = Analysis(
         ("assets/app_icon.png", "assets"),
         ("assets/app_icon.ico", "assets"),
         ("assets/connectapp_logo.jpg", "assets"),
+        ("images/BudgetApp.png", "images"),
         ("docs/Budget_App_Manual_es.pdf", "docs"),
     ],
     hiddenimports=[

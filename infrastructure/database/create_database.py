@@ -6,6 +6,7 @@
 # Licensed under the Apache License, Version 2.0.
 
 import sqlite3
+import re
 import mysql.connector
 
 from infrastructure.runtime_paths import local_database_path
@@ -45,10 +46,13 @@ class CreateDatabase:
 
             self._create_sqlite_tables(cursor)
             self._migrate_sqlite_budget_lines(cursor)
+            self._migrate_sqlite_budgets(cursor)
             conn.commit()
             conn.close()
             print(f"¡Base de datos local SQLite [{self.database}] configurada con éxito!")
         else:
+            if not re.fullmatch(r"[A-Za-z0-9_]+", self.database):
+                raise ValueError("Remote database name may only contain letters, numbers and underscores")
             conn_server = mysql.connector.connect(
                 host=self.host,
                 user=self.user,
@@ -67,6 +71,7 @@ class CreateDatabase:
 
             self._create_mysql_tables(cursor)
             self._migrate_mysql_budget_lines(cursor)
+            self._migrate_mysql_budgets(cursor)
             cursor.close()
             conn.close()
             print(f"¡Base de datos remota MySQL [{self.database}] configurada con éxito!")
@@ -104,7 +109,8 @@ class CreateDatabase:
                            nif_cif     TEXT,
                            client_name TEXT NOT NULL,
                            budget_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                           total       REAL NOT NULL
+                           total       REAL NOT NULL,
+                           status      TEXT NOT NULL DEFAULT 'draft'
                        )
                        ''')
 
@@ -165,7 +171,8 @@ class CreateDatabase:
                            nif_cif     VARCHAR(50),
                            client_name VARCHAR(255)   NOT NULL,
                            budget_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                           total       DECIMAL(10, 2) NOT NULL
+                           total       DECIMAL(10, 2) NOT NULL,
+                           status      VARCHAR(20) NOT NULL DEFAULT 'draft'
                        )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                        ''')
 
@@ -224,3 +231,14 @@ class CreateDatabase:
             except Exception:
                 # Si el motor no soporta IF NOT EXISTS o la columna ya existe, seguimos.
                 pass
+
+    def _migrate_sqlite_budgets(self, cursor):
+        cursor.execute("PRAGMA table_info(budgets)")
+        if "status" not in {row[1] for row in cursor.fetchall()}:
+            cursor.execute("ALTER TABLE budgets ADD COLUMN status TEXT NOT NULL DEFAULT 'draft'")
+
+    def _migrate_mysql_budgets(self, cursor):
+        try:
+            cursor.execute("ALTER TABLE budgets ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'draft'")
+        except Exception:
+            pass
