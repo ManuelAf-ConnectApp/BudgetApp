@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QComboBox
 )
 
-from infrastructure.ui.style import StyleApp
 from infrastructure.ui.i18n import normalize_language, t
 from infrastructure.services.credentials import save_remote_password
 
