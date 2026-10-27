@@ -10,6 +10,21 @@
 - 📋 List saved budgets
 - 🧾 Export budgets to PDF
 - 🌍 Switch the interface between Spanish and English
+- 🖼️ Branded start screen and application icon
+- 🔄 Update, duplicate, delete, and track budget status (draft, sent, accepted)
+- 🔐 Store remote database credentials in the operating-system keychain
+- 💶 Calculate monetary amounts with decimal arithmetic and consistent rounding
+- 🛡️ Create validated SQLite backups and restore them safely
+
+## Version improvements
+
+This version strengthens data integrity, security, and maintainability:
+
+- SQLite company details now support subsequent updates instead of failing after the first save.
+- Local and remote repositories support transactional budget updates and deletion.
+- Remote history retains the database budget ID, preventing accidental grouping of distinct records.
+- Generated commercial PDFs follow the selected Spanish or English interface language.
+- The project includes automated quality checks through Ruff and GitHub Actions.
 
 ## 🏗️ Architecture snapshot
 
@@ -62,8 +77,21 @@ main.py
 Install the dependencies used by the project and run:
 
 ```bash
-python main.py
+python3 -m pip install -r requirements.txt
+python3 main.py
 ```
+
+La conexión remota guarda su contraseña en el llavero seguro del sistema mediante `keyring`; no se persiste en los ajustes de la aplicación.
+
+## Calidad
+
+La suite se ejecuta con:
+
+```bash
+python3 -m unittest discover -v
+```
+
+El repositorio incluye configuración de Ruff y un flujo de GitHub Actions que ejecuta pruebas y análisis estático en cada `push` y `pull request`.
 
 If you use a packaged build, the generated app can be launched from the `dist/` output produced by the build process.
 

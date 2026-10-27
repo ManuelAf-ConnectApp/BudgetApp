@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from infrastructure.ui.style import StyleApp
 from infrastructure.ui.i18n import normalize_language, t
+from infrastructure.services.credentials import save_remote_password
 
 
 class ConnectionDialog(QDialog):
@@ -136,5 +137,9 @@ class ConnectionDialog(QDialog):
         self.settings.setValue("remote_host", host)
         self.settings.setValue("remote_db", db)
         self.settings.setValue("remote_username", user)
-        self.settings.setValue("remote_password", password)
+        try:
+            save_remote_password(password)
+        except Exception as exc:
+            QMessageBox.warning(self, t("connection.error_title", self.lang), str(exc))
+            return
         self.accept()

@@ -88,7 +88,8 @@ class RemoteDatabase:
         cursor = conn.cursor()
 
         query = """
-                SELECT b.nif_cif,
+                SELECT b.id,
+                       b.nif_cif,
                        b.client_name,
                        b.budget_date,
                        b.total,
@@ -99,7 +100,8 @@ class RemoteDatabase:
                        COALESCE(bl.unit_price, bl.price, 0) AS unit_price,
                        COALESCE(bl.discount_pct, 0) AS discount_pct,
                        COALESCE(bl.tax_pct, 21) AS tax_pct,
-                       COALESCE(bl.notes, '') AS notes
+                       COALESCE(bl.notes, '') AS notes,
+                       b.status
                 FROM budgets b
                          LEFT JOIN budget_lines bl ON b.id = bl.budget_id
                 ORDER BY b.id DESC
@@ -107,28 +109,31 @@ class RemoteDatabase:
         cursor.execute(query)
         rows = cursor.fetchall()
 
+        cursor.close()
         conn.close()
 
-        budget_map: dict[tuple, BudgetRecord] = {}
+        budget_map: dict[int, BudgetRecord] = {}
         for row in rows:
-            key = (row[0], row[1], row[2], row[3])
-            if key not in budget_map:
-                budget_map[key] = BudgetRecord(
-                    nif_cif=row[0],
-                    client=row[1],
-                    budget_date=_coerce_budget_date(row[2]),
-                    total=float(row[3]) if row[3] is not None else 0.0,
+            budget_id = row[0]
+            if budget_id not in budget_map:
+                budget_map[budget_id] = BudgetRecord(
+                    budget_id=budget_id,
+                    nif_cif=row[1],
+                    client=row[2],
+                    budget_date=_coerce_budget_date(row[3]),
+                    total=float(row[4]) if row[4] is not None else 0.0,
+                    status=row[13] or "draft",
                 )
-            if any(row[4:12]):
-                budget_map[key].lines.append(BudgetLineRecord(
-                    description=row[4],
-                    product=row[5],
-                    unit=row[6],
-                    quantity=float(row[7]),
-                    unit_price=float(row[8]),
-                    discount_pct=float(row[9] or 0),
-                    tax_pct=float(row[10] or 21),
-                    notes=row[11] or "",
+            if any(row[5:13]):
+                budget_map[budget_id].lines.append(BudgetLineRecord(
+                    description=row[5],
+                    product=row[6],
+                    unit=row[7],
+                    quantity=float(row[8]),
+                    unit_price=float(row[9]),
+                    discount_pct=float(row[10] or 0),
+                    tax_pct=float(row[11] or 21),
+                    notes=row[12] or "",
                 ))
 
         return list(budget_map.values())
@@ -138,15 +143,24 @@ class RemoteDatabase:
         cursor = conn.cursor()
 
         try:
-            query_budget = """
-                           INSERT INTO budgets (nif_cif, client_name, budget_date, total)
-                           VALUES (%s, %s, %s, %s)
-                           """
-
-            values_budget = (budget.nif_cif, budget.client, budget.budget_date.isoformat(), budget.total)
-            cursor.execute(query_budget, values_budget)
-
-            budget_id = cursor.lastrowid
+            conn.start_transaction()
+            if budget.budget_id:
+                cursor.execute(
+                    """UPDATE budgets SET nif_cif = %s, client_name = %s, budget_date = %s, total = %s, status = %s
+                       WHERE id = %s""",
+                    (budget.nif_cif, budget.client, budget.budget_date.isoformat(), budget.total, budget.status, budget.budget_id),
+                )
+                if cursor.rowcount == 0:
+                    raise ValueError(f"Budget {budget.budget_id} does not exist")
+                cursor.execute("DELETE FROM budget_lines WHERE budget_id = %s", (budget.budget_id,))
+                budget_id = budget.budget_id
+            else:
+                cursor.execute(
+                    """INSERT INTO budgets (nif_cif, client_name, budget_date, total, status)
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    (budget.nif_cif, budget.client, budget.budget_date.isoformat(), budget.total, budget.status),
+                )
+                budget_id = cursor.lastrowid
 
             lines_data = []
             for line in budget.lines:
@@ -173,7 +187,31 @@ class RemoteDatabase:
                     lines_data
                 )
 
+            conn.commit()
             return budget_id
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cursor.close()
+            conn.close()
+
+    def delete_budget(self, budget_id: int) -> None:
+        conn = self.create_database.connect()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("DELETE FROM budgets WHERE id = %s", (budget_id,))
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
+
+    def update_budget_status(self, budget_id: int, status: str) -> None:
+        conn = self.create_database.connect()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("UPDATE budgets SET status = %s WHERE id = %s", (status, budget_id))
+            conn.commit()
         finally:
             cursor.close()
             conn.close()

@@ -6,8 +6,9 @@
 # Licensed under the Apache License, Version 2.0.
 
 import os
-import shutil
+import sqlite3
 import sys
+import tempfile
 
 from PySide6.QtCore import QSettings, Signal
 from PySide6.QtGui import QAction, QActionGroup, QIcon
@@ -39,7 +40,7 @@ class MainWindow(QMainWindow):
         self._history_visible = True
         self._summary_visible = True
         self.setWindowTitle(t("app.name", self.lang))
-        self.setWindowIcon(QIcon(str(resource_path("assets", "app_icon.png"))))
+        self.setWindowIcon(QIcon(str(resource_path("images", "BudgetApp.png"))))
         self.style = StyleApp
         self.resize(1280, 1080)
 
@@ -95,6 +96,10 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self._make_action(t("main.zoom_reset", self.lang), self._reset_zoom, "Ctrl+0"))
 
         budget_menu.addAction(self._make_action(t("main.duplicate_budget", self.lang), self._duplicate_selected_budget))
+        budget_menu.addAction(self._make_action(t("main.delete_budget", self.lang), self._delete_selected_budget))
+        status_menu = budget_menu.addMenu(t("main.status", self.lang))
+        for status in ("draft", "sent", "accepted"):
+            status_menu.addAction(self._make_action(t(f"main.status_{status}", self.lang), lambda value=status: self._set_selected_budget_status(value)))
         budget_menu.addAction(self._make_action(t("main.recalculate", self.lang), self._recalculate_budget))
 
         settings_mode_menu = settings_menu.addMenu(t("main.install_mode", self.lang))
@@ -218,6 +223,28 @@ class MainWindow(QMainWindow):
             return
         self.budget_view.load_budget_into_editor(self._vm.product_catalog[index])
 
+    def _delete_selected_budget(self):
+        index = self._vm.selected_history_index
+        if index < 0 or index >= len(self._vm.product_catalog):
+            QMessageBox.information(self, t("budget.history_title", self.lang), t("main.select_history", self.lang))
+            return
+        budget = self._vm.product_catalog[index]
+        if QMessageBox.question(
+            self,
+            t("main.delete_budget", self.lang),
+            t("main.delete_budget_confirm", self.lang, budget_id=budget.budget_id),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        ) == QMessageBox.StandardButton.Yes:
+            self._vm.delete_budget(budget.budget_id)
+
+    def _set_selected_budget_status(self, status: str):
+        index = self._vm.selected_history_index
+        if index < 0 or index >= len(self._vm.product_catalog):
+            QMessageBox.information(self, t("budget.history_title", self.lang), t("main.select_history", self.lang))
+            return
+        self._vm.update_budget_status(self._vm.product_catalog[index].budget_id, status)
+
     def _recalculate_budget(self):
         self.budget_view._recalculate_all_rows()
         self.budget_view._sync_view_model_from_table()
@@ -261,7 +288,11 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
-        shutil.copy2(source_path, file_path)
+        try:
+            self._vm.db.backup_to(file_path)
+        except (OSError, sqlite3.Error) as exc:
+            QMessageBox.warning(self, t("main.backup_title", self.lang), str(exc))
+            return
         QMessageBox.information(self, t("main.backup_title", self.lang), t("main.backup_ok", self.lang, path=file_path))
 
     def _restore_local_database(self):
@@ -278,9 +309,40 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
+        if not self._is_valid_sqlite_backup(file_path):
+            QMessageBox.warning(self, t("main.restore_title", self.lang), t("main.restore_invalid", self.lang))
+            return
+        if QMessageBox.question(
+            self,
+            t("main.restore_title", self.lang),
+            t("main.restore_confirm", self.lang),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            return
+
         target_path = self._local_db_path()
-        shutil.copy2(file_path, target_path)
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=os.path.dirname(target_path), suffix=".db", delete=False) as temporary_file:
+                temporary_path = temporary_file.name
+            with sqlite3.connect(file_path) as source, sqlite3.connect(temporary_path) as destination:
+                source.backup(destination)
+            os.replace(temporary_path, target_path)
+        except (OSError, sqlite3.Error) as exc:
+            if temporary_path and os.path.exists(temporary_path):
+                os.unlink(temporary_path)
+            QMessageBox.warning(self, t("main.restore_title", self.lang), str(exc))
+            return
         QMessageBox.information(self, t("main.restore_title", self.lang), t("main.restore_ok", self.lang))
+
+    @staticmethod
+    def _is_valid_sqlite_backup(file_path: str) -> bool:
+        try:
+            with sqlite3.connect(f"file:{file_path}?mode=ro", uri=True) as conn:
+                return conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        except sqlite3.Error:
+            return False
 
     def _is_local_database(self) -> bool:
         return hasattr(self._vm.db, "create_database") and getattr(self._vm.db.create_database, "is_local", False)

@@ -8,6 +8,7 @@ a = Analysis(
     datas=[
         ('assets/app_icon.png', 'assets'),
         ('assets/connectapp_logo.jpg', 'assets'),
+        ('images/BudgetApp.png', 'images'),
         ('docs/Budget_App_Manual_es.pdf', 'docs'),
     ],
     hiddenimports=['mysql.connector.locales', 'mysql.connector.locales.eng', 'mysql.connector.plugins', 'mysql.connector.plugins.mysql_native_password', 'mysql.connector.plugins.caching_sha2_password'],

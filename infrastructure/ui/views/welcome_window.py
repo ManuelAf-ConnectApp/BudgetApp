@@ -6,9 +6,11 @@
 # Licensed under the Apache License, Version 2.0.
 
 from PySide6.QtCore import Qt, QSettings
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QComboBox
 
 from infrastructure.ui.i18n import normalize_language, t
+from infrastructure.runtime_paths import resource_path
 
 
 class WelcomeWindow(QWidget):
@@ -21,7 +23,7 @@ class WelcomeWindow(QWidget):
         self._on_remote_clicked = on_remote_clicked
         self._on_language_changed = on_language_changed
 
-        self.setFixedSize(600, 500)
+        self.setFixedSize(600, 560)
 
         self.language_label = QLabel()
         self.language_combo = QComboBox()
@@ -30,6 +32,12 @@ class WelcomeWindow(QWidget):
         self.title_label = QLabel()
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.title_label.setStyleSheet("font-size: 14px; font-weight: bold; margin-bottom: 20px;")
+
+        self.logo_label = QLabel()
+        self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logo = QPixmap(str(resource_path("images", "BudgetApp.png")))
+        if not logo.isNull():
+            self.logo_label.setPixmap(logo.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
 
         self.local_button = QPushButton()
         self.local_button.setStyleSheet("font-size: 14px; font-weight: bold; padding: 15px;")
@@ -45,6 +53,7 @@ class WelcomeWindow(QWidget):
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addLayout(language_layout)
+        layout.addWidget(self.logo_label)
         layout.addWidget(self.title_label)
         layout.addWidget(self.local_button)
         layout.addWidget(self.remote_button)

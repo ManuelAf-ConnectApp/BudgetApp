@@ -51,13 +51,13 @@ class BudgetListViewWidget(QWidget):
         self.budget_list_widget = QTableWidget()
         self.budget_list_widget.setStyleSheet(StyleApp.MODERN_STYLE_SHEET)
 
-        # 1. Definimos las 5 columnas de nuestro Excel
-        self.budget_list_widget.setColumnCount(4)
+        self.budget_list_widget.setColumnCount(5)
         self.budget_list_widget.setHorizontalHeaderLabels([
             t("budget.col_client", self.lang),
             t("budget.col_nif", self.lang),
             t("budget.col_date", self.lang),
             t("budget.col_total", self.lang),
+            t("budget.col_status", self.lang),
         ])
 
         # 2. Comportamiento profesional de selección
@@ -118,18 +118,21 @@ class BudgetListViewWidget(QWidget):
             item_date = QTableWidgetItem(fecha_str)
 
             item_total = QTableWidgetItem(f"{b.total:.2f}€")
+            item_status = QTableWidgetItem(t(f"main.status_{b.status}", self.lang))
 
             # 2. 🎨 Alineaciones estéticas estilo Excel (Números al centro/derecha, texto a la izquierda)
             item_id.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             item_date.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             item_nif.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             item_total.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            item_status.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
             # 3. Inyectamos las celdas en sus respectivas columnas (0 a 4)
             self.budget_list_widget.setItem(row_idx, 0, item_client)
             self.budget_list_widget.setItem(row_idx, 1, item_nif)
             self.budget_list_widget.setItem(row_idx, 2, item_date)
             self.budget_list_widget.setItem(row_idx, 3, item_total)
+            self.budget_list_widget.setItem(row_idx, 4, item_status)
 
     def on_export_pdf_clicked(self):
         try:

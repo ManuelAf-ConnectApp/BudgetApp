@@ -7,6 +7,7 @@ import types
 import unittest
 from contextlib import contextmanager
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 
@@ -117,11 +118,11 @@ class TestBudgetCalculations(unittest.TestCase):
             tax_pct=21,
         )
 
-        self.assertEqual(line.gross_amount, 200)
-        self.assertEqual(line.discount_amount, 20)
-        self.assertEqual(line.taxable_amount, 180)
-        self.assertAlmostEqual(line.tax_amount, 37.8)
-        self.assertAlmostEqual(line.line_total, 217.8)
+        self.assertEqual(line.gross_amount, Decimal("200.00"))
+        self.assertEqual(line.discount_amount, Decimal("20.00"))
+        self.assertEqual(line.taxable_amount, Decimal("180.00"))
+        self.assertEqual(line.tax_amount, Decimal("37.80"))
+        self.assertEqual(line.line_total, Decimal("217.80"))
 
     def test_budget_total_is_recomputed_from_lines(self):
         budget = Budget(budget_id=1, nif_cif="A12345678", client="Cliente", budget_date=date(2026, 6, 30))
@@ -145,13 +146,13 @@ class TestBudgetCalculations(unittest.TestCase):
         )
 
         self.assertEqual(len(budget.budget_lines), 2)
-        self.assertAlmostEqual(budget.total, 229.9)
+        self.assertEqual(budget.total, Decimal("229.90"))
 
     def test_budget_total_can_be_set_when_there_are_no_lines(self):
         budget = Budget()
         budget.total = 123.45
 
-        self.assertEqual(budget.total, 123.45)
+        self.assertEqual(budget.total, Decimal("123.45"))
 
 
 class TestLocalDatabaseIntegration(unittest.TestCase):
@@ -172,6 +173,10 @@ class TestLocalDatabaseIntegration(unittest.TestCase):
             loaded = db.get_company_profile()
 
             self.assertEqual(loaded, profile)
+
+            updated = CompanyProfileRecord(name="Connect App ES", cif="B87654321")
+            db.save_company_profile(updated)
+            self.assertEqual(db.get_company_profile(), updated)
 
     def test_budget_round_trip(self):
         with temporary_home():
@@ -217,6 +222,18 @@ class TestLocalDatabaseIntegration(unittest.TestCase):
             self.assertEqual(line.discount_pct, 10)
             self.assertEqual(line.tax_pct, 21)
             self.assertEqual(line.notes, "Trabajo inicial")
+
+            budget.budget_id = budget_id
+            budget.client = "Cliente actualizado"
+            self.assertEqual(db.save_budget(budget), budget_id)
+            self.assertEqual(len(db.get_budget_list()), 1)
+            self.assertEqual(db.get_budget_list()[0].client, "Cliente actualizado")
+
+            db.update_budget_status(budget_id, "accepted")
+            self.assertEqual(db.get_budget_list()[0].status, "accepted")
+
+            db.delete_budget(budget_id)
+            self.assertEqual(db.get_budget_list(), [])
 
 
 class TestPdfReferenceFormatting(unittest.TestCase):
