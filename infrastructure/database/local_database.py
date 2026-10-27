@@ -193,7 +193,7 @@ class LocalDatabase:
             conn.commit()
             return budget_id
 
-        except Exception as e:
+        except Exception:
             conn.rollback()
             raise
         finally:
