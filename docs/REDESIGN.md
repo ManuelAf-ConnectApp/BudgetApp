@@ -9,6 +9,14 @@ trabajo de una aplicación de escritorio.
 
 Este documento es una propuesta de diseño. No cambia comportamiento ni código.
 
+## Concepto visual
+
+![Mockup del espacio de trabajo de presupuestos](design/budgetapp-workspace-concept.png)
+
+El mockup ilustra la jerarquía propuesta: historial a la izquierda, edición en
+el centro y resumen con acciones finales a la derecha. Es una referencia visual
+de dirección; los textos y datos mostrados son de ejemplo.
+
 ## Problemas que resuelve
 
 - El editor y el historial compiten por el ancho disponible sin una jerarquía
