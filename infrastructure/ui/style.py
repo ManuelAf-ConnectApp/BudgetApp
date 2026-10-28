@@ -1,145 +1,40 @@
-#
-# Author: Manuel Maria Alconchel Fernandez
-# E-mail: incidencias@connectapp.es
-# Date: 30/06/2026
-#
-# Licensed under the Apache License, Version 2.0.
-
 class StyleApp:
+    """Shared visual language for the desktop workspace."""
+
     MODERN_STYLE_SHEET = """
-            /* Fondo general de la aplicación */
-            QMainWindow, QWidget {
-                background-color: #F8FAFC;  /* Un blanco roto/grisáceo muy limpio */
-                font-family: 'Segoe UI', Arial, sans-serif;
-                font-size: 13px;
-                color: #1E293B;  /* Azul oscuro casi negro para los textos */
-            }
-
-            /* Cajas de texto (Inputs) */
-            QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit {
-                border: 1px solid #CBD5E1;
-                border-radius: 6px;
-                padding: 6px 10px;
-                background-color: #FFFFFF;
-            }
-            
-            #remoteBanner {
-                background-color: #e3f2fd;       /* Azul claro de información */
-                color: #0d47a1;                  /* Texto azul oscuro de alto contraste */
-                border: 1px solid #bbdefb;       /* Borde suave a juego */
-                border-radius: 6px;              /* Esquinas redondeadas estilo ERP moderno */
-                padding: 12px 16px;              /* Margen interno para que respire el texto */
-                font-size: 13px;                 /* Tamaño de letra legible pero estilizado */
-            }
-
-            /* Efecto cuando el usuario hace clic en una caja de texto */
-            QLineEdit:focus, QComboBox:focus, QSpinBox:focus {
-                border: 2px solid #3B82F6;  /* Borde azul brillante */
-            }
-
-            /* Las cajas grupales (Información de cliente, líneas, etc.) */
-            QGroupBox {
-                width: 100%;
-                font-weight: bold;
-                font-size: 14px;
-                color: #0F172A;
-                border: 1px solid #E2E8F0;
-                border-radius: 8px;
-                margin-top: 16px;
-                padding-top: 16px;
-                background-color: #FFFFFF;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                left: 12px;
-                padding: 0 4px;
-            }
-
-            /* Listado de Presupuestos (QListWidget) */
-            QListWidget {
-                border: 1px solid #E2E8F0;
-                border-radius: 8px;
-                background-color: #FFFFFF;
-                padding: 5px;
-            }
-            QListWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #F1F5F9;
-            }
-            QListWidget::item:hover {
-                background-color: #F1F5F9;
-                border-radius: 4px;
-            }
-            QListWidget::item:selected {
-                background-color: #DBEAFE;
-                color: #1E40AF;
-                border-radius: 4px;
-            }
-
-            /* Botón Secundario (Limpiar, Volver...) */
-            QPushButton {
-                background-color: #FFFFFF;
-                border: 1px solid #CBD5E1;
-                border-radius: 6px;
-                color: #475569;
-                font-weight: bold;
-                padding: 8px 16px;
-            }
-            QPushButton:hover {
-                background-color: #F8FAFC;
-                border-color: #94A3B8;
-            }
-
-            /* Botón Principal (Guardar, Agregar...) - Estilo "Accent" */
-            QPushButton#btn_principal {
-                background-color: #0F172A;  /* Slate oscuro muy elegante */
-                color: #FFFFFF;
-                border: none;
-            }
-            QPushButton#btn_principal:hover {
-                background-color: #1E293B;
-            }
-            QPushButton#btn_principal:pressed {
-                background-color: #334155;
-            }
-            
-            /* --- BARRA DE MENÚ SUPERIOR --- */
-            QMenuBar {
-                background-color: #ffffff;
-                border-bottom: 1px solid #e0e0e0;
-            }
-            
-            QMenuBar::item {
-                background-color: transparent;
-                padding: 6px 12px;
-                color: #333333;
-            }
-            
-            /* 💥 SOLUCIÓN: Efecto hover para el menú horizontal superior */
-            QMenuBar::item:selected {
-                background-color: #f5f5f5;
-                border-radius: 4px;
-                color: #000000;
-            }
-            
-            /* --- MENÚS DESPLEGABLES --- */
-            QMenu {
-                background-color: #ffffff;
-                border: 1px solid #cccccc;
-                padding: 4px;
-            }
-            
-            QMenu::item {
-                padding: 6px 24px 6px 12px;
-                color: #333333;
-            }
-            
-            /* 💥 SOLUCIÓN: Efecto hover para las opciones desplegables */
-            QMenu::item:selected {
-                background-color: #0d47a1;  /* El azul corporativo de tu app */
-                color: #ffffff;             /* Texto blanco para alto contraste */
-                border-radius: 4px;
-            }
-            
-        """
+        QMainWindow, QWidget { background: #F6F8FC; color: #172033; font-family: "Segoe UI", "Inter", Arial, sans-serif; font-size: 13px; }
+        QMainWindow::separator { background: #E2E8F0; width: 1px; height: 1px; }
+        QMenuBar { background: #FFFFFF; border-bottom: 1px solid #E2E8F0; padding: 2px 8px; }
+        QMenuBar::item { padding: 7px 10px; border-radius: 5px; }
+        QMenuBar::item:selected, QMenu::item:selected { background: #EAF2FF; color: #1D4ED8; }
+        QMenu { background: #FFFFFF; border: 1px solid #D9E2EF; padding: 5px; }
+        QMenu::item { padding: 7px 28px 7px 10px; border-radius: 4px; }
+        QToolBar { background: #FFFFFF; border: none; border-bottom: 1px solid #E2E8F0; padding: 9px 16px; spacing: 8px; }
+        QToolButton { padding: 7px 10px; border-radius: 6px; }
+        QToolButton:hover { background: #F1F5F9; }
+        QLineEdit, QComboBox, QDateEdit { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 7px; padding: 7px 10px; min-height: 18px; }
+        QLineEdit:focus, QComboBox:focus, QDateEdit:focus { border: 2px solid #2563EB; padding: 6px 9px; }
+        QGroupBox, QFrame#workspaceCard, QFrame#summaryPanel, QFrame#historyPanel { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; }
+        QGroupBox { font-weight: 700; font-size: 14px; margin-top: 12px; padding: 18px 14px 14px; }
+        QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 5px; }
+        QLabel#workspaceTitle { font-size: 20px; font-weight: 700; color: #0F172A; }
+        QLabel#sectionTitle { font-size: 15px; font-weight: 700; color: #172033; }
+        QLabel#mutedText { color: #64748B; }
+        QLabel#totalCaption { color: #64748B; font-weight: 600; }
+        QLabel#totalAmount { color: #0F172A; font-size: 25px; font-weight: 750; }
+        QLabel#summaryValue { font-weight: 600; color: #334155; }
+        QLabel#statusPill, QComboBox#statusPill { background: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; border-radius: 12px; padding: 4px 9px; font-weight: 700; }
+        QPushButton { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 7px; color: #334155; font-weight: 600; padding: 8px 13px; min-height: 18px; }
+        QPushButton:hover { background: #F8FAFC; border-color: #94A3B8; }
+        QPushButton#primaryButton { background: #2563EB; color: #FFFFFF; border: 1px solid #2563EB; }
+        QPushButton#primaryButton:hover { background: #1D4ED8; border-color: #1D4ED8; }
+        QPushButton#quietButton { border-color: transparent; background: transparent; color: #475569; }
+        QPushButton#quietButton:hover { background: #F1F5F9; }
+        QTableWidget { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; gridline-color: #EEF2F7; }
+        QTableWidget::item { padding: 7px 8px; border-bottom: 1px solid #EEF2F7; }
+        QTableWidget::item:selected { background: #EAF2FF; color: #172033; }
+        QHeaderView::section { background: #F8FAFC; color: #475569; border: none; border-bottom: 1px solid #E2E8F0; padding: 8px; font-weight: 700; }
+        QScrollBar:vertical { background: transparent; width: 10px; margin: 4px; }
+        QScrollBar::handle:vertical { background: #CBD5E1; border-radius: 5px; min-height: 25px; }
+        QSplitter::handle { background: #E2E8F0; width: 1px; }
+    """

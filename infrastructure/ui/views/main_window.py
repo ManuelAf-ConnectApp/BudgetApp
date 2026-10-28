@@ -12,8 +12,11 @@ import tempfile
 
 from PySide6.QtCore import QSettings, Signal
 from PySide6.QtGui import QAction, QActionGroup, QIcon
-from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout,
-                               QMessageBox, QFileDialog, QDialog)
+from PySide6.QtWidgets import (
+    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
+    QFrame, QLabel, QPushButton, QToolBar, QComboBox, QSizePolicy,
+    QMessageBox, QFileDialog, QDialog,
+)
 
 from infrastructure.ui.i18n import normalize_language, t
 from infrastructure.ui.style import StyleApp
@@ -24,6 +27,66 @@ from infrastructure.ui.views.dialog.about_dialog import AboutDialog
 from infrastructure.ui.views.dialog.company_dialog import CompanyConfigDialog
 from infrastructure.ui.views.widgets.budget_list_view import BudgetListViewWidget
 from infrastructure.ui.views.widgets.budget_view import BudgetViewWidget
+
+
+class BudgetSummaryPanel(QFrame):
+    """Persistent financial summary and the primary budget actions."""
+
+    def __init__(self, budget_view: BudgetViewWidget, language: str):
+        super().__init__()
+        self.setObjectName("summaryPanel")
+        self.setMinimumWidth(245)
+        self.setMaximumWidth(300)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+        title = QLabel(t("budget.total_label", language, amount="").rstrip(": "))
+        title.setObjectName("sectionTitle")
+        layout.addWidget(title)
+
+        self.subtotal = self._value_row(layout, t("redesign.subtotal", language))
+        self.discount = self._value_row(layout, t("redesign.discount", language))
+        self.tax = self._value_row(layout, t("redesign.tax", language))
+        layout.addSpacing(4)
+        caption = QLabel(t("redesign.total", language))
+        caption.setObjectName("totalCaption")
+        self.total = QLabel(t("budget.zero_amount", language))
+        self.total.setObjectName("totalAmount")
+        layout.addWidget(caption)
+        layout.addWidget(self.total)
+        layout.addSpacing(8)
+
+        save_button = QPushButton(t("main.save", language))
+        save_button.setObjectName("primaryButton")
+        save_button.clicked.connect(budget_view.on_save_clicked)
+        export_button = QPushButton(t("main.export_pdf", language))
+        export_button.clicked.connect(budget_view.export_current_budget_pdf)
+        clear_button = QPushButton(t("budget.clear", language))
+        clear_button.setObjectName("quietButton")
+        clear_button.clicked.connect(budget_view.clear_editor_and_model)
+        layout.addWidget(save_button)
+        layout.addWidget(export_button)
+        layout.addWidget(clear_button)
+        layout.addStretch()
+
+    @staticmethod
+    def _value_row(layout: QVBoxLayout, label: str) -> QLabel:
+        row = QHBoxLayout()
+        row.addWidget(QLabel(label))
+        row.addStretch()
+        value = QLabel("0.00€")
+        value.setObjectName("summaryValue")
+        row.addWidget(value)
+        layout.addLayout(row)
+        return value
+
+    def update_values(self, subtotal: str, discount: str, tax: str, total: str):
+        self.subtotal.setText(subtotal)
+        self.discount.setText(discount)
+        self.tax.setText(tax)
+        self.total.setText(total)
 
 
 class MainWindow(QMainWindow):
@@ -44,20 +107,58 @@ class MainWindow(QMainWindow):
         self.style = StyleApp
         self.resize(1280, 1080)
 
-        main_layout = QHBoxLayout()
-
         self.budget_view = BudgetViewWidget(self._vm, language=self.lang)
         self.budget_list_view = BudgetListViewWidget(self._vm, language=self.lang)
+        self.summary_panel = BudgetSummaryPanel(self.budget_view, self.lang)
+        self.history_panel = QFrame()
+        self.history_panel.setObjectName("historyPanel")
+        history_layout = QVBoxLayout(self.history_panel)
+        history_layout.setContentsMargins(0, 0, 0, 0)
+        history_layout.addWidget(self.budget_list_view)
 
-        main_layout.addWidget(self.budget_view)
-        main_layout.addWidget(self.budget_list_view)
+        workspace = QSplitter()
+        workspace.setChildrenCollapsible(False)
+        workspace.addWidget(self.history_panel)
+        workspace.addWidget(self.budget_view)
+        workspace.addWidget(self.summary_panel)
+        workspace.setStretchFactor(0, 1)
+        workspace.setStretchFactor(1, 5)
+        workspace.setStretchFactor(2, 1)
+        workspace.setSizes([295, 820, 265])
 
+        main_layout = QHBoxLayout()
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(workspace)
         container = QWidget()
         container.setLayout(main_layout)
         self.setCentralWidget(container)
 
         self._create_menu_bar()
+        self._create_workspace_toolbar()
+        self.budget_list_view.new_budget_requested.connect(self.budget_view.new_budget)
+        self.budget_view.summary_changed.connect(self.summary_panel.update_values)
+        self.budget_view.summary_visibility_changed.connect(self.summary_panel.setVisible)
         self._vm.interface_refresh()
+
+    def _create_workspace_toolbar(self):
+        toolbar = QToolBar()
+        toolbar.setMovable(False)
+        brand = QLabel(t("app.name", self.lang))
+        brand.setObjectName("sectionTitle")
+        toolbar.addWidget(brand)
+        toolbar.addSeparator()
+        toolbar.addWidget(QLabel(t("main.budget", self.lang)))
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        toolbar.addWidget(spacer)
+        status = QComboBox()
+        status.addItem(t("main.status_draft", self.lang), "draft")
+        status.addItem(t("main.status_sent", self.lang), "sent")
+        status.addItem(t("main.status_accepted", self.lang), "accepted")
+        status.setObjectName("statusPill")
+        status.currentIndexChanged.connect(lambda _index: setattr(self._vm.budget, "status", status.currentData()))
+        toolbar.addWidget(status)
+        self.addToolBar(toolbar)
 
     def _create_menu_bar(self):
         menu_bar = self.menuBar()

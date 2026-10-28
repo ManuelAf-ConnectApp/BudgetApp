@@ -15,6 +15,18 @@
 - 🔐 Store remote database credentials in the operating-system keychain
 - 💶 Calculate monetary amounts with decimal arithmetic and consistent rounding
 - 🛡️ Create validated SQLite backups and restore them safely
+- ✨ Work in a redesigned three-panel workspace: searchable history, focused editor, and persistent financial summary
+
+## 🎨 Redesigned workspace
+
+The budget workflow is organized around the task at hand:
+
+- **Searchable history**: quickly create, find, and open saved budgets from the left panel.
+- **Focused editor**: keep client details, budget date, and line items together in the central workspace.
+- **Persistent summary**: review subtotal, discounts, VAT, total, and the main save/export actions without leaving the budget.
+- **Clearer visual hierarchy**: updated cards, tables, inputs, buttons, focus states, and status controls improve readability while preserving keyboard shortcuts and the Spanish/English interface.
+
+The design direction is documented in [docs/REDESIGN.md](docs/REDESIGN.md), with a visual concept in [docs/design/budgetapp-workspace-concept.png](docs/design/budgetapp-workspace-concept.png).
 
 ## Version improvements
 

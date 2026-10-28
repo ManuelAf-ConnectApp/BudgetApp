@@ -9,11 +9,11 @@ import datetime
 from decimal import Decimal, InvalidOperation
 from html import escape
 
-from PySide6.QtCore import QDate, Qt, QTimer
+from PySide6.QtCore import QDate, Qt, QTimer, Signal
 from PySide6.QtGui import QTextDocument
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QGroupBox, QSizePolicy,
-    QLineEdit, QDateEdit, QListWidget, QLabel, QPushButton, QMessageBox,
+    QLineEdit, QDateEdit, QLabel, QPushButton, QMessageBox,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QFileDialog, QDialog
 )
 from PySide6.QtPrintSupport import QPrinter, QPrintDialog
@@ -28,6 +28,8 @@ from infrastructure.ui.style import StyleApp
 
 class BudgetViewWidget(QWidget):
     LINE_COLUMNS = 9
+    summary_changed = Signal(str, str, str, str)
+    summary_visibility_changed = Signal(bool)
 
     def __init__(self, vm: BudgetViewModel, language: str = "es"):
         super().__init__()
@@ -49,22 +51,44 @@ class BudgetViewWidget(QWidget):
 
     def _setup_ui(self):
         main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(16, 16, 16, 16)
+        main_layout.setSpacing(12)
 
+        header = self._create_editor_header()
         client_section = self._create_client_section()
         lines_section = self._create_lines_section()
-        list_section = self._create_list_section()
-        bottom_actions = self._create_bottom_actions()
 
+        main_layout.addLayout(header)
         main_layout.addWidget(client_section)
         main_layout.addWidget(lines_section)
-        main_layout.addLayout(list_section)
-        main_layout.addLayout(bottom_actions)
+        main_layout.addStretch()
 
         self.setLayout(main_layout)
 
+    def _create_editor_header(self) -> QHBoxLayout:
+        layout = QHBoxLayout()
+        heading = QVBoxLayout()
+        self.budget_title = QLabel(t("main.new_budget", self.lang))
+        self.budget_title.setObjectName("workspaceTitle")
+        subtitle = QLabel(t("budget.client_section", self.lang).rstrip(":"))
+        subtitle.setObjectName("mutedText")
+        heading.addWidget(self.budget_title)
+        heading.addWidget(subtitle)
+
+        self.input_date = QDateEdit()
+        self.input_date.setCalendarPopup(True)
+        self.input_date.setDate(QDate.currentDate())
+        self.input_date.setDisplayFormat("dd/MM/yyyy")
+        self.input_date.setMaximumWidth(130)
+        layout.addLayout(heading)
+        layout.addStretch()
+        layout.addWidget(QLabel(t("budget.date", self.lang)))
+        layout.addWidget(self.input_date)
+        return layout
+
     def _create_client_section(self) -> QGroupBox:
         group_client = QGroupBox(t("budget.client_section", self.lang))
-        group_client.setStyleSheet(StyleApp.MODERN_STYLE_SHEET)
+        group_client.setObjectName("workspaceCard")
         group_client.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         form_layout = QFormLayout()
         form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -89,31 +113,27 @@ class BudgetViewWidget(QWidget):
         self.input_nif_client.setPlaceholderText(t("budget.nif_ph", self.lang))
         self.input_nif_client.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        self.input_date = QDateEdit()
-        self.input_date.setCalendarPopup(True)
-        self.input_date.setDate(QDate.currentDate())
-        self.input_date.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-
         form_layout.addRow(t("budget.company", self.lang), self.input_client_company)
         form_layout.addRow(t("budget.name", self.lang), self.input_client_name)
         form_layout.addRow(t("budget.surname", self.lang), self.input_surname)
         form_layout.addRow(t("budget.nif", self.lang), self.input_nif_client)
-        form_layout.addRow(t("budget.date", self.lang), self.input_date)
 
         group_client.setLayout(form_layout)
         return group_client
 
     def _create_lines_section(self) -> QGroupBox:
         group_lines = QGroupBox(t("budget.lines_section", self.lang))
-        group_lines.setStyleSheet(StyleApp.MODERN_STYLE_SHEET)
+        group_lines.setObjectName("workspaceCard")
         group_lines.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
         wrapper = QVBoxLayout()
         toolbar = QHBoxLayout()
 
         self.btn_add_line = QPushButton(t("budget.add", self.lang))
+        self.btn_add_line.setObjectName("primaryButton")
         self.btn_remove_line = QPushButton(t("budget.remove", self.lang))
         self.btn_clear_lines = QPushButton(t("budget.clear_lines", self.lang))
+        self.btn_clear_lines.setObjectName("quietButton")
 
         toolbar.addWidget(self.btn_add_line)
         toolbar.addWidget(self.btn_remove_line)
@@ -121,7 +141,6 @@ class BudgetViewWidget(QWidget):
         toolbar.addStretch()
 
         self.lines_table = QTableWidget(0, self.LINE_COLUMNS)
-        self.lines_table.setStyleSheet(StyleApp.MODERN_STYLE_SHEET)
         self.lines_table.setHorizontalHeaderLabels([
             t("budget.description", self.lang),
             t("budget.product", self.lang),
@@ -162,37 +181,10 @@ class BudgetViewWidget(QWidget):
         group_lines.setLayout(wrapper)
         return group_lines
 
-    def _create_list_section(self) -> QVBoxLayout:
-        layout = QVBoxLayout()
-
-        self.items_list = QListWidget()
-        self.lbl_total = QLabel(t("budget.total_label", self.lang, amount=t("budget.zero_amount", self.lang)))
-        self.lbl_total.setStyleSheet("font-size: 18px; font-weight: bold; margin: 10px 0;")
-
-        layout.addWidget(self.items_list)
-        layout.addWidget(self.lbl_total)
-        return layout
-
-    def _create_bottom_actions(self) -> QHBoxLayout:
-        layout_bottom = QHBoxLayout()
-
-        self.clear_button = QPushButton(t("budget.clear", self.lang))
-        self.clear_button.setStyleSheet(StyleApp.MODERN_STYLE_SHEET)
-
-        self.btn_save_budget = QPushButton(t("budget.save", self.lang))
-        self.btn_save_budget.setStyleSheet(StyleApp.MODERN_STYLE_SHEET)
-
-        layout_bottom.addWidget(self.clear_button)
-        layout_bottom.addWidget(self.btn_save_budget)
-        return layout_bottom
-
     def _connect_signals(self):
         self.btn_add_line.clicked.connect(self._insert_blank_line)
         self.btn_remove_line.clicked.connect(self._remove_selected_line)
         self.btn_clear_lines.clicked.connect(self._clear_lines_table)
-        self.clear_button.clicked.connect(self._clear_budget)
-        self.btn_save_budget.clicked.connect(self.on_save_clicked)
-
         self.lines_table.cellPressed.connect(self._capture_pending_history_state)
         self.lines_table.cellChanged.connect(self._on_line_cell_changed)
 
@@ -316,8 +308,7 @@ class BudgetViewWidget(QWidget):
             self._recalculate_row_total(row)
 
     def set_summary_visible(self, visible: bool):
-        self.items_list.setVisible(visible)
-        self.lbl_total.setVisible(visible)
+        self.summary_visibility_changed.emit(visible)
 
     def new_budget(self):
         self._clear_budget()
@@ -371,6 +362,7 @@ class BudgetViewWidget(QWidget):
             budget_date=budget.budget_date,
             status=budget.status,
         )
+        self.budget_title.setText(f"{t('main.budget', self.lang)} #{budget.budget_id}")
         self.input_client_company.setText("")
         self.input_client_name.setText(budget.client)
         self.input_surname.clear()
@@ -584,8 +576,8 @@ class BudgetViewWidget(QWidget):
         self.lines_table.setRowCount(0)
         self._insert_blank_line(record_history=False)
         self._vm.budget = Budget(client=t("budget.pending_client", self.lang))
+        self.budget_title.setText(t("main.new_budget", self.lang))
         self._vm.set_budget_lines([])
-        self.items_list.clear()
         self.input_client_company.clear()
         self.input_client_name.clear()
         self.input_surname.clear()
@@ -700,7 +692,15 @@ class BudgetViewWidget(QWidget):
         return item.text().strip() if item else ""
 
     def _update_total_label(self, text: str):
-        self.lbl_total.setText(t("budget.total_label", self.lang, amount=text))
+        subtotal = sum((line.gross_amount for line in self._vm.budget.budget_lines), Decimal("0.00"))
+        discount = sum((line.discount_amount for line in self._vm.budget.budget_lines), Decimal("0.00"))
+        tax = sum((line.tax_amount for line in self._vm.budget.budget_lines), Decimal("0.00"))
+        self.summary_changed.emit(
+            f"{subtotal:.2f}€",
+            f"-{discount:.2f}€",
+            f"{tax:.2f}€",
+            text,
+        )
 
     def _sync_view_model_from_table(self):
         self._sync_budget_header_to_vm()
@@ -730,8 +730,8 @@ class BudgetViewWidget(QWidget):
         self._vm.save_budget(self._vm.budget.client, self._vm.budget.nif_cif, self._vm.budget.budget_date)
 
     def visual_list_update(self, text_items):
-        self.items_list.clear()
-        self.items_list.addItems(text_items)
+        # The persistent summary panel replaces the former technical line list.
+        return
 
     def show_success_message(self, budget_id: int):
         QMessageBox.information(
@@ -750,6 +750,7 @@ class BudgetViewWidget(QWidget):
         self.input_surname.clear()
         self.input_nif_client.clear()
         self.input_date.setDate(QDate.currentDate())
+        self.budget_title.setText(t("main.new_budget", self.lang))
         self._clear_lines_table()
 
     def show_error_message(self, error_msg: str):
