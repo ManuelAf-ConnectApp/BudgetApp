@@ -8,15 +8,17 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QTableWidget, QTableWidgetItem, QHeaderView,
-    QAbstractItemView, QPushButton, QMessageBox, QFileDialog
+    QAbstractItemView, QPushButton, QLineEdit, QMessageBox, QFileDialog
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from core.model.budget import Budget
 from infrastructure.ui.i18n import normalize_language, t
 from infrastructure.ui.style import StyleApp
 
 
 class BudgetListViewWidget(QWidget):
+    new_budget_requested = Signal()
+
     def __init__(self, vm, language: str = "es"):
         super().__init__()
         self._vm = vm
@@ -31,6 +33,8 @@ class BudgetListViewWidget(QWidget):
     def _setup_ui(self):
         """Inicializa y organiza la estructura visual del listado en formato tabla."""
         main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(12, 12, 12, 12)
+        main_layout.setSpacing(10)
 
         list_components = self._create_list_components()
         action_components = self._create_action_components()
@@ -44,13 +48,21 @@ class BudgetListViewWidget(QWidget):
         """Construye el título y la tabla estilo Excel."""
         layout = QVBoxLayout()
 
+        title_row = QHBoxLayout()
         budget_list_title = QLabel(t("budget.history_title", self.lang))
-        budget_list_title.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 5px;")
+        budget_list_title.setObjectName("sectionTitle")
+        self.btn_new_budget = QPushButton(t("main.new_budget", self.lang))
+        self.btn_new_budget.setObjectName("primaryButton")
+        title_row.addWidget(budget_list_title)
+        title_row.addStretch()
+        title_row.addWidget(self.btn_new_budget)
+
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText(t("redesign.search_history", self.lang))
+        self.search_input.setClearButtonEnabled(True)
 
         # 💥 COMPONENTE CLAVE: Cambiamos a QTableWidget
         self.budget_list_widget = QTableWidget()
-        self.budget_list_widget.setStyleSheet(StyleApp.MODERN_STYLE_SHEET)
-
         self.budget_list_widget.setColumnCount(5)
         self.budget_list_widget.setHorizontalHeaderLabels([
             t("budget.col_client", self.lang),
@@ -73,19 +85,22 @@ class BudgetListViewWidget(QWidget):
             QHeaderView.ResizeMode.Stretch)  # Se estiran solas
         self.budget_list_widget.verticalHeader().setVisible(False)  # Ocultamos el número de fila de la izquierda
 
-        layout.addWidget(budget_list_title)
+        layout.addLayout(title_row)
+        layout.addWidget(self.search_input)
         layout.addWidget(self.budget_list_widget)
         return layout
 
     def _create_action_components(self) -> QHBoxLayout:
         layout = QHBoxLayout()
         self.btn_export_pdf = QPushButton(t("budget.export_pdf", self.lang))
-        self.btn_export_pdf.setStyleSheet(StyleApp.MODERN_STYLE_SHEET)
+        self.btn_export_pdf.setObjectName("quietButton")
         layout.addWidget(self.btn_export_pdf)
         return layout
 
     def _connect_signals(self):
+        self.btn_new_budget.clicked.connect(self.new_budget_requested)
         self.btn_export_pdf.clicked.connect(self.on_export_pdf_clicked)
+        self.search_input.textChanged.connect(self._filter_rows)
 
         # 💥 Al pinchar en cualquier celda, capturamos la fila entera
         self.budget_list_widget.cellClicked.connect(self.on_row_selected)
@@ -133,6 +148,18 @@ class BudgetListViewWidget(QWidget):
             self.budget_list_widget.setItem(row_idx, 2, item_date)
             self.budget_list_widget.setItem(row_idx, 3, item_total)
             self.budget_list_widget.setItem(row_idx, 4, item_status)
+
+        self._filter_rows(self.search_input.text())
+
+    def _filter_rows(self, query: str):
+        query = query.strip().casefold()
+        for row in range(self.budget_list_widget.rowCount()):
+            contents = " ".join(
+                self.budget_list_widget.item(row, column).text()
+                for column in range(self.budget_list_widget.columnCount())
+                if self.budget_list_widget.item(row, column) is not None
+            ).casefold()
+            self.budget_list_widget.setRowHidden(row, bool(query) and query not in contents)
 
     def on_export_pdf_clicked(self):
         try:
