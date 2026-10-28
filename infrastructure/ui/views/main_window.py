@@ -13,7 +13,7 @@ import tempfile
 from PySide6.QtCore import QSettings, Signal
 from PySide6.QtGui import QAction, QActionGroup, QIcon
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFormLayout, QSplitter,
+    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
     QFrame, QLabel, QPushButton, QToolBar, QComboBox, QSizePolicy,
     QMessageBox, QFileDialog, QDialog,
 )

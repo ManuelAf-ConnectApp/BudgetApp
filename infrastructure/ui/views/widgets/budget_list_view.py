@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 from core.model.budget import Budget
 from infrastructure.ui.i18n import normalize_language, t
-from infrastructure.ui.style import StyleApp
 
 
 class BudgetListViewWidget(QWidget):

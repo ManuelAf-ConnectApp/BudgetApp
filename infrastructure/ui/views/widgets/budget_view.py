@@ -13,7 +13,7 @@ from PySide6.QtCore import QDate, Qt, QTimer, Signal
 from PySide6.QtGui import QTextDocument
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QGroupBox, QSizePolicy,
-    QLineEdit, QDateEdit, QListWidget, QLabel, QPushButton, QMessageBox,
+    QLineEdit, QDateEdit, QLabel, QPushButton, QMessageBox,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QFileDialog, QDialog
 )
 from PySide6.QtPrintSupport import QPrinter, QPrintDialog
